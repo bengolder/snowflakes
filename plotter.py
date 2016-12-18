@@ -23,6 +23,7 @@ class Plotter:
         if self.plot:
             plotters = instantiate_plotters()
             self.plotter = plotters[0]
+            self.plotter.write(hpgl.AS(1))
 
     def get_bounds(self):
         self.bounds_poly = Polygon([
@@ -34,7 +35,8 @@ class Plotter:
             ])
         self.width = 11640 + 10720
         self.height = 8640 * 2
-        self.scale_ratio = self.height / 1000
+        #self.scale_ratio = self.height / 1000
+        self.scale_ratio = 2
 
     def add_bounds_preview(self):
         self.preview_polygon(self.bounds_poly, color="#CCCCCC")
@@ -64,19 +66,3 @@ class Plotter:
 
     def save_preview(self):
         pyplot.savefig('plot.png', dpi=300)
-
-
-def run():
-    preview = Plotter(plot=False)
-    poly = Polygon([
-        (0, 0), (0, 200), (100, 100),
-        (200, 200), (200, 0), (100, 80), (0, 0)])
-    poly2 = rotate(poly, 45)
-
-    preview.add_polygon(poly)
-    preview.add_polygon(poly2, color='#FF0000')
-    preview.save_preview()
-
-
-if __name__ == '__main__':
-    run()

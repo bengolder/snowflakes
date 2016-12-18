@@ -2,5 +2,5 @@ install:
 	pip install -r ./requirements.txt
 
 run:
-	python main.py
+	python snowflakes.py
 	open ./plot.png
