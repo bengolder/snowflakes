@@ -1,4 +1,4 @@
-from plotter import Drawing
+from plotterWsvgPreview import Drawing
 from shapely.geometry import Polygon, Point, GeometryCollection
 from shapely.affinity import scale, rotate, translate
 from shapely.ops import cascaded_union
@@ -91,7 +91,7 @@ def run():
         flake_y = y_init + row * y_offset
         flake_origin = Point(flake_x, flake_y)
         snowflake = make_snowflake(seed_int, flake_origin)
-        if i > 2 and i < 15:
+        if i < 15:
             drawing.add(snowflake)
     drawing.preview()
     # drawing.plot()

@@ -5,4 +5,8 @@ pip-selfcheck.json
 share
 bin
 include
+text.py
+test-svgwrite.svg
+preview.svg
+snowflakes.scriv/
 *.pyc
