@@ -12,17 +12,20 @@ class Drawing:
 
     def __init__(self, geoms=None):
         self.geoms = geoms or []
+        self.scale_ratio = 2.8
         self.get_bounds()
         self.svg = svgwrite.Drawing(
             filename="preview.svg",
-            #size=("800px", "600px")
+            size=("2560px", "1600px")
             )
-        # self.add_bounds_preview()
-        self.svg.viewbox(width=self.width, height=self.height)
+        self.svg.viewbox(
+            width=self.width,
+            height=self.height,
+            )
+        self.add_bounds_preview()
         self.plotter = None
         # self.scale_ratio = self.height / 1000
         #self.scale_ratio = 2.8
-        self.scale_ratio = 1
 
     def plot(self, geom=None):
         if not self.plotter:
@@ -65,7 +68,11 @@ class Drawing:
         if hasattr(geom, 'xy'):
             # assume it is a linear ring or linestring
             line_points = geom.coords
-            line_points = [(x[0]+1000, x[1]*-1 + 3000) for x in line_points]
+            x_offset = self.width/2
+            y_offset = self.height/2
+            line_points = [
+                (x[0]+x_offset, x[1]*-1 + y_offset)
+                for x in line_points]
             self.svg.add(self.svg.polyline(
                 points=line_points,
                 stroke_width="5",
@@ -100,11 +107,13 @@ class Drawing:
     def add_bounds_preview(self):
         width_string = str(self.width)
         height_string = str(self.height)
-        self.svg.rect(
+        self.svg.add(self.svg.rect(
             insert=(0, 0),
             size=(width_string+"px", height_string+"px"),
-            stroke_width="1",
-            stroke="black",)
+            stroke_width="100",
+            stroke="black",
+            fill="rgb(255,255,255)",
+            ))
 
     def plot_coords(self, coords):
         start = hpgl.PU([coords[0]])
