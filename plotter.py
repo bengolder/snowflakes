@@ -1,6 +1,7 @@
+import uuid
 from matplotlib import pyplot
-from shapely.geometry import Polygon, LineString
-from shapely.affinity import scale, rotate
+from shapely.geometry import Polygon
+from shapely.affinity import scale
 from chiplotle import (
     hpgl,
     instantiate_plotters
@@ -9,8 +10,8 @@ from chiplotle import (
 
 class Drawing:
 
-    def __init__(self, geoms=None):
-        self.geoms = geoms or []
+    def __init__(self, *geoms):
+        self.geoms = list(geoms)
         self.get_bounds()
         self.fig = pyplot.figure(1, figsize=(5, 5), dpi=300)
         pyplot.axis([-11640, 10720, -11640, 10720])
@@ -54,13 +55,15 @@ class Drawing:
             raise NotImplementedError(
                 "I don't know how to plot {}".format(type(geom)))
 
-    def preview(self, geom=None, filename="plot.png"):
+    def preview(self, geom=None, filepath=None):
         if geom:
             self.add(geom)
         self.add_bounds_preview()
         for geom in self.geoms:
             self.preview_geom(geom)
-        pyplot.savefig(filename, dpi=300)
+        if not filepath:
+            filepath = "previews/plot-preview-" + uuid.uuid4().hex + ".png"
+        pyplot.savefig(filepath, dpi=300)
 
     def preview_geom(self, geom, **kwargs):
         if hasattr(geom, 'xy'):
