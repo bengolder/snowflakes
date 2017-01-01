@@ -1,4 +1,5 @@
 .Python
+.DS_Store
 lib
 shapely
 pip-selfcheck.json

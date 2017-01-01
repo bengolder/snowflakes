@@ -1,4 +1,5 @@
 import svgwrite
+import uuid
 from shapely.geometry import Polygon
 from shapely.affinity import scale
 from chiplotle import (
@@ -9,12 +10,12 @@ from chiplotle import (
 
 class Drawing:
 
-    def __init__(self, geoms=None):
-        self.geoms = geoms or []
-        self.scale_ratio = 2.8
+    def __init__(self, *geoms):
+        self.geoms = list(geoms)
         self.get_bounds()
+        self.default_preview_filepath = "previews/preview.svg"
         self.svg = svgwrite.Drawing(
-            filename="preview.svg",
+            filename=self.default_preview_filepath,
             size=("2560px", "1600px")
             )
         self.svg.viewbox(
@@ -24,7 +25,7 @@ class Drawing:
         self.add_bounds_preview()
         self.plotter = None
         # self.scale_ratio = self.height / 1000
-        # self.scale_ratio = 2.8
+        self.scale_ratio = 2.8
 
     def plot(self, geom=None):
         if not self.plotter:
@@ -55,12 +56,15 @@ class Drawing:
             raise NotImplementedError(
                 "I don't know how to plot {}".format(type(geom)))
 
-    def preview(self, geom=None, filename="preview.svg"):
+    def preview(self, geom=None, filepath=None):
         if geom:
             self.add(geom)
         for geom in self.geoms:
             self.preview_geom(geom)
         self.svg.save()
+        if not filepath:
+            filepath = "previews/plot-preview-" + uuid.uuid4().hex + ".png"
+        self.svg.saveas(filepath)
 
     def preview_geom(self, geom, **kwargs):
         if hasattr(geom, 'xy'):
