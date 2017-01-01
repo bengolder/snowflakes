@@ -33,4 +33,4 @@ if __name__ == '__main__':
     geom = regular_polygon(Point(0, 0), 8000, sides=50)
     hatches = hatch(geom, 150, 42)
     drawing = Drawing(hatches)
-    drawing.preview(filepath="previews/hatches.png")
+    drawing.preview(filepath="previews/hatches.svg")

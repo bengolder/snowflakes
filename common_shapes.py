@@ -36,4 +36,4 @@ if __name__ == '__main__':
     drawing = Drawing()
     drawing.add(hexagon(Point(-1200, 0), 600))
     drawing.add(regular_polygon(Point(200, 0), 600, 7))
-    drawing.preview(filepath="previews/common_shapes.png")
+    drawing.preview(filepath="previews/common_shapes.svg")
