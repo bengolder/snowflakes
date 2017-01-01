@@ -1,6 +1,6 @@
-from matplotlib import pyplot
-from shapely.geometry import Polygon, LineString
-from shapely.affinity import scale, rotate
+import svgwrite
+from shapely.geometry import Polygon
+from shapely.affinity import scale
 from chiplotle import (
     hpgl,
     instantiate_plotters
@@ -11,19 +11,20 @@ class Drawing:
 
     def __init__(self, geoms=None):
         self.geoms = geoms or []
+        self.scale_ratio = 2.8
         self.get_bounds()
-        self.fig = pyplot.figure(1, figsize=(5, 5), dpi=300)
-        pyplot.axis([-11640, 10720, -11640, 10720])
-        self.subplot = self.fig.add_subplot(111)
-        self.subplot.set_title('Plotter Preview')
-        self.default_style = dict(
-            color='#0000ff', alpha=0.6,
-            linewidth=0.3, solid_capstyle='round')
+        self.svg = svgwrite.Drawing(
+            filename="preview.svg",
+            size=("2560px", "1600px")
+            )
+        self.svg.viewbox(
+            width=self.width,
+            height=self.height,
+            )
         self.add_bounds_preview()
         self.plotter = None
         # self.scale_ratio = self.height / 1000
-        self.scale_ratio = 2.8
-        # self.scale_ratio = 6
+        # self.scale_ratio = 2.8
 
     def plot(self, geom=None):
         if not self.plotter:
@@ -54,21 +55,28 @@ class Drawing:
             raise NotImplementedError(
                 "I don't know how to plot {}".format(type(geom)))
 
-    def preview(self, geom=None, filename="plot.png"):
+    def preview(self, geom=None, filename="preview.svg"):
         if geom:
             self.add(geom)
-        self.add_bounds_preview()
         for geom in self.geoms:
             self.preview_geom(geom)
-        pyplot.savefig(filename, dpi=300)
+        self.svg.save()
 
     def preview_geom(self, geom, **kwargs):
         if hasattr(geom, 'xy'):
             # assume it is a linear ring or linestring
-            x, y = geom.xy
-            style = self.default_style.copy()
-            style.update(kwargs)
-            self.subplot.plot(x, y, **style)
+            line_points = geom.coords
+            x_offset = self.width/2
+            y_offset = self.height/2
+            line_points = [
+                (x[0]+x_offset, x[1]*-1 + y_offset)
+                for x in line_points]
+            self.svg.add(self.svg.polyline(
+                points=line_points,
+                stroke_width="5",
+                fill="rgb(255,255,255)",
+                stroke="black",)
+            )
         elif hasattr(geom, 'exterior'):
             # assume it has a Polygon-like interface
             self.preview_geom(geom.exterior, **kwargs)
@@ -95,9 +103,15 @@ class Drawing:
         self.height = 8640 * 2
 
     def add_bounds_preview(self):
-        self.preview_geom(
-            self.bounds_poly, color="#AAAAAA",
-            linewidth=2)
+        width_string = str(self.width)
+        height_string = str(self.height)
+        self.svg.add(self.svg.rect(
+            insert=(0, 0),
+            size=(width_string+"px", height_string+"px"),
+            stroke_width="100",
+            stroke="black",
+            fill="rgb(255,255,255)",
+            ))
 
     def plot_coords(self, coords):
         start = hpgl.PU([coords[0]])
