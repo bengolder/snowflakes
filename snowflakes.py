@@ -1,4 +1,4 @@
-from plotterWsvgPreview import Drawing
+from plotter import Drawing
 from shapely.geometry import Polygon, Point, GeometryCollection
 from shapely.affinity import scale, rotate, translate
 from shapely.ops import cascaded_union
