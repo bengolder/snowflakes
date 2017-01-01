@@ -63,7 +63,7 @@ class Drawing:
             self.preview_geom(geom)
         self.svg.save()
         if not filepath:
-            filepath = "previews/plot-preview-" + uuid.uuid4().hex + ".png"
+            filepath = "previews/plot-preview-" + uuid.uuid4().hex + ".svg"
         self.svg.saveas(filepath)
 
     def preview_geom(self, geom, **kwargs):
