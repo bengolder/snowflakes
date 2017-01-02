@@ -163,5 +163,11 @@ def run(starter=301):
     drawing.plot()
 
 if __name__ == '__main__':
+    """
+    Previously plotted:
+        - 104
+        - 304
+        - 319
+    """
     # for i in range(312, 322):
-        run(319)
+    run(319)
