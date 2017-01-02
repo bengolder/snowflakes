@@ -8,24 +8,29 @@ from chiplotle import (
     )
 
 
+def px(*args):
+    return [str(item) + "px" for item in args]
+
+
 class Drawing:
 
     def __init__(self, *geoms):
         self.geoms = list(geoms)
         self.get_bounds()
         self.default_preview_filepath = "previews/preview.svg"
-        self.svg = svgwrite.Drawing(
-            filename=self.default_preview_filepath,
-            size=("2560px", "1600px")
-            )
-        self.svg.viewbox(
-            width=self.width,
-            height=self.height,
-            )
-        self.add_bounds_preview()
         self.plotter = None
-        # self.scale_ratio = self.height / 1000
-        self.scale_ratio = 2.8
+
+    def get_bounds(self):
+        self.bounds_poly = Polygon([
+            (-11640, -8640),
+            (-11640, 8640),
+            (10720, 8640),
+            (10720, -8640),
+            (-11640, -8640),
+            ])
+        self.bounds = self.bounds_poly.bounds
+        self.width = 11640 + 10720
+        self.height = 8640 * 2
 
     def plot(self, geom=None):
         if not self.plotter:
@@ -37,7 +42,7 @@ class Drawing:
             self.plot_geom(geom)
 
     def add(self, geom):
-        self.geoms.append(self.scale_to_fit(geom))
+        self.geoms.append(geom)
 
     def plot_geom(self, geom):
         if hasattr(geom, 'coords'):
@@ -56,7 +61,30 @@ class Drawing:
             raise NotImplementedError(
                 "I don't know how to plot {}".format(type(geom)))
 
+    def start_svg(self):
+        preview_margin = 100
+        screen_height = 600
+        svg_width = self.width + (preview_margin * 2)
+        svg_height = self.height + (preview_margin * 2)
+        screen_width = (svg_width / float(svg_height)) * screen_height
+        self.svg = svgwrite.Drawing(
+            filename=self.default_preview_filepath,
+            size=px(screen_width, screen_height),
+            style="background-color: #ccc"
+            )
+        self.svg.viewbox(
+            minx=self.bounds[0] - preview_margin,
+            miny=self.bounds[1] - preview_margin,
+            width=svg_width,
+            height=svg_height,
+            )
+        self.plotter_geom_group = self.svg.g(
+            transform="scale(1, -1)"
+            )
+
     def preview(self, geom=None, filepath=None):
+        self.start_svg()
+        self.add_bounds_preview()
         if geom:
             self.add(geom)
         for geom in self.geoms:
@@ -64,21 +92,16 @@ class Drawing:
         self.svg.save()
         if not filepath:
             filepath = "previews/plot-preview-" + uuid.uuid4().hex + ".svg"
+        self.svg.add(self.plotter_geom_group)
         self.svg.saveas(filepath)
 
     def preview_geom(self, geom, **kwargs):
         if hasattr(geom, 'xy'):
             # assume it is a linear ring or linestring
-            line_points = geom.coords
-            x_offset = self.width/2
-            y_offset = self.height/2
-            line_points = [
-                (x[0]+x_offset, x[1]*-1 + y_offset)
-                for x in line_points]
-            self.svg.add(self.svg.polyline(
-                points=line_points,
+            self.plotter_geom_group.add(self.svg.polyline(
+                points=geom.coords,
                 stroke_width="5",
-                fill="rgb(255,255,255)",
+                fill="none",
                 stroke="black",)
             )
         elif hasattr(geom, 'exterior'):
@@ -94,27 +117,11 @@ class Drawing:
             raise NotImplementedError(
                 "I don't know how to preview {}".format(type(geom)))
 
-    def get_bounds(self):
-        self.bounds_poly = Polygon([
-            (-11640, -8640),
-            (-11640, 8640),
-            (10720, 8640),
-            (10720, -8640),
-            (-11640, -8640),
-            ])
-        self.bounds = self.bounds_poly.bounds
-        self.width = 11640 + 10720
-        self.height = 8640 * 2
-
     def add_bounds_preview(self):
-        width_string = str(self.width)
-        height_string = str(self.height)
         self.svg.add(self.svg.rect(
-            insert=(0, 0),
-            size=(width_string+"px", height_string+"px"),
-            stroke_width="100",
-            stroke="black",
-            fill="rgb(255,255,255)",
+            insert=(self.bounds[0], self.bounds[1]),
+            size=(self.width, self.height),
+            fill="white",
             ))
 
     def plot_coords(self, coords):
