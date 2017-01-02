@@ -1,24 +1,46 @@
 import svgwrite
 import uuid
-from shapely.geometry import Polygon
-from shapely.affinity import scale
+from shapely.geometry import Polygon, Point, box
+from shapely.affinity import scale, translate
 from chiplotle import (
     hpgl,
     instantiate_plotters
     )
 
 
+def position_and_size_of_geom(geom):
+    """Returns xmin, ymin, width, and height of a geometry
+    based on its shapely `.bounds`
+    """
+    bounds = geom.bounds
+    width = bounds[2] - bounds[0]
+    height = bounds[3] - bounds[1]
+    return bounds[0], bounds[1], width, height
+
+
 def px(*args):
     return [str(item) + "px" for item in args]
 
 
-class Drawing:
+PLOTTER_UNITS_PER_INCH = 1018.39880656
 
-    def __init__(self, *geoms):
-        self.geoms = list(geoms)
+
+class Drawing:
+    """Assumes that everything is in inches
+
+    Before plotting or making previews, all geometry is
+    translated into plotter units.
+    """
+
+    def __init__(self, default_scale=PLOTTER_UNITS_PER_INCH):
+        self.geoms = []
         self.get_bounds()
         self.default_preview_filepath = "previews/preview.svg"
         self.plotter = None
+        self.scalar = default_scale
+        self.paper = None
+        self.paper_origin = Point(-11.7850105901, -8.765625)
+        self.add_paper(24, 18)
 
     def get_bounds(self):
         self.bounds_poly = Polygon([
@@ -32,17 +54,42 @@ class Drawing:
         self.width = 11640 + 10720
         self.height = 8640 * 2
 
-    def plot(self, geom=None):
+    def plot(self):
         if not self.plotter:
             plotters = instantiate_plotters()
             self.plotter = plotters[0]
-        if geom:
-            self.add(geom)
         for geom in self.geoms:
             self.plot_geom(geom)
 
     def add(self, geom):
-        self.geoms.append(geom)
+        self.geoms.append(self.scale_to_plotter_units(geom))
+
+    def add_paper(self, width, height):
+        """paper width and height are assumed to be in scalar units
+            (inches by default)
+        """
+        geom = box(
+            minx=0, miny=0,
+            maxx=width, maxy=height
+            )
+        self.paper = translate(
+            geom,
+            xoff=self.paper_origin.x,
+            yoff=self.paper_origin.y
+            )
+        self.paper_center = self.paper.centroid
+        return self.paper
+
+    def scale_to_plotter_units(self, geom):
+        return scale(geom, self.scalar, self.scalar, origin=Point(0, 0))
+
+    def clip_to_plotter_bounds(self):
+        """Clips all geometries to the boundaries of the plotter
+        """
+        self.geoms = [
+            self.bounds_poly.intersection(geom)
+            for geom in self.geoms
+        ]
 
     def plot_geom(self, geom):
         if hasattr(geom, 'coords'):
@@ -64,8 +111,12 @@ class Drawing:
     def start_svg(self):
         preview_margin = 100
         screen_height = 600
-        svg_width = self.width + (preview_margin * 2)
-        svg_height = self.height + (preview_margin * 2)
+        plotter_paper = self.scale_to_plotter_units(self.paper)
+        paper_x, paper_y, paper_width, paper_height = \
+            position_and_size_of_geom(plotter_paper)
+        paper_top = paper_y + paper_height
+        svg_width = paper_width + (preview_margin * 2)
+        svg_height = paper_height + (preview_margin * 2)
         screen_width = (svg_width / float(svg_height)) * screen_height
         self.svg = svgwrite.Drawing(
             filename=self.default_preview_filepath,
@@ -73,26 +124,30 @@ class Drawing:
             style="background-color: #ccc"
             )
         self.svg.viewbox(
-            minx=self.bounds[0] - preview_margin,
-            miny=self.bounds[1] - preview_margin,
+            minx=paper_x - preview_margin,
+            miny=(paper_top * -1) - preview_margin,
             width=svg_width,
             height=svg_height,
             )
         self.plotter_geom_group = self.svg.g(
             transform="scale(1, -1)"
             )
+        # draw paper
+        self.plotter_geom_group.add(self.svg.rect(
+            insert=(paper_x, paper_y),
+            size=(paper_width, paper_height),
+            fill="white",
+            ))
 
-    def preview(self, geom=None, filepath=None):
+    def preview(self, filepath=None):
         self.start_svg()
-        self.add_bounds_preview()
-        if geom:
-            self.add(geom)
         for geom in self.geoms:
             self.preview_geom(geom)
+        self.svg.add(self.plotter_geom_group)
+        self.add_bounds_preview()
         self.svg.save()
         if not filepath:
             filepath = "previews/plot-preview-" + uuid.uuid4().hex + ".svg"
-        self.svg.add(self.plotter_geom_group)
         self.svg.saveas(filepath)
 
     def preview_geom(self, geom, **kwargs):
@@ -121,7 +176,10 @@ class Drawing:
         self.svg.add(self.svg.rect(
             insert=(self.bounds[0], self.bounds[1]),
             size=(self.width, self.height),
-            fill="white",
+            stroke_width=25,
+            stroke_dasharray=100,
+            stroke="black",
+            fill="none"
             ))
 
     def plot_coords(self, coords):
