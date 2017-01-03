@@ -3,4 +3,4 @@ install:
 
 run:
 	python snowflakes.py
-	open preview.svg
+	open previews/preview.svg

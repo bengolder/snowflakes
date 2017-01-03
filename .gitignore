@@ -1,4 +1,5 @@
 .Python
+.DS_Store
 lib
 shapely
 pip-selfcheck.json
@@ -7,6 +8,5 @@ bin
 include
 text.py
 test-svgwrite.svg
-preview.svg
 snowflakes.scriv/
 *.pyc
